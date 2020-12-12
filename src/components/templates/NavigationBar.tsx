@@ -1,0 +1,21 @@
+import Link from "next/link";
+import * as React from "react";
+
+export const NavigationBar: React.FC = () => {
+  return (
+    <header className="text-white bg-black px-3 py-2">
+      <div className="text-xl font-bold flex items-center max-w-7xl mx-auto">
+        <div>
+          <Link href="/">
+            <a className="hover:underline">Watch Festival</a>
+          </Link>
+        </div>
+        <div className="text-right flex-grow">
+          <Link href="/about">
+            <a className="hover:underline">About</a>
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+};
