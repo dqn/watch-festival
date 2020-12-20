@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse, NextApiHandler } from "next";
 import Pusher from "pusher";
 
+import { randomAlphaNumeric } from "@/helpers/string";
+
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID!,
   key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY!,
@@ -8,15 +10,6 @@ const pusher = new Pusher({
   cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
   useTLS: true,
 });
-
-function randomAlphaNumeric(length: number): string {
-  let s = "";
-  Array.from({ length }).some(() => {
-    s += Math.random().toString(36).slice(2);
-    return s.length >= length;
-  });
-  return s.slice(0, length);
-}
 
 const handler: NextApiHandler = async (
   req: NextApiRequest,
