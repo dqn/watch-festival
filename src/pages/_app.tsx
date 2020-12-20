@@ -1,9 +1,9 @@
 import type { AppProps } from "next/app";
 import Head from "next/head";
 import * as React from "react";
+import { CookiesProvider } from "react-cookie";
 
 import { NavigationBar } from "@/components/templates/NavigationBar";
-
 import "@/styles/index.css";
 
 const App: React.FC<AppProps> = ({ Component, pageProps }) => {
@@ -13,8 +13,10 @@ const App: React.FC<AppProps> = ({ Component, pageProps }) => {
         <title>Watch Festival</title>
       </Head>
 
-      <NavigationBar />
-      <Component {...pageProps} />
+      <CookiesProvider>
+        <NavigationBar />
+        <Component {...pageProps} />
+      </CookiesProvider>
 
       <style global jsx>{`
         html {

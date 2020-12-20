@@ -23,13 +23,14 @@ const handler: NextApiHandler = async (
   res: NextApiResponse,
 ) => {
   const { socket_id: socketId, channel_name: channel } = req.body;
+  const { name } = req.cookies;
 
   const id = randomAlphaNumeric(15);
 
   const auth = pusher.authenticate(socketId, channel, {
     user_id: id,
     user_info: {
-      name: id,
+      name,
     },
   });
 

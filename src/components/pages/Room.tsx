@@ -66,7 +66,6 @@ export const Room: React.FC<Props> = ({ id }) => {
 
   useEffect(() => {
     const pusher = createPusherClient();
-    console.log(id);
     const channelName = `presence-room-${id}`;
     const channel = pusher.subscribe(channelName);
     setChannel(channel);
