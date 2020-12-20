@@ -17,21 +17,17 @@ type PusherEvents = {
   >;
   "pusher:member_added": ChannelMember;
   "pusher:member_removed": ChannelMember;
-  "client-video-url": {
-    videoURL: string;
-  };
-  "client-seeked": {
+  "client-playing-states": {
+    url: string;
+    paused: boolean;
     currentTime: number;
-  };
-  "client-playing-state": {
-    playing: boolean;
   };
 };
 
 export const Home: React.FC = () => {
   const video = useRef<HTMLVideoElement>(null);
 
-  const [channel, setChannel] = useState<Channel | null>(null);
+  const [channel, setChannel] = useState<null | Channel>(null);
   const [members, setMembers] = useState<ChannelMember[]>([]);
   const [preventTriggering, setPreventTriggering] = useState(false);
   const { register, handleSubmit } = useForm<{ videoURL: string }>();
@@ -41,20 +37,16 @@ export const Home: React.FC = () => {
       if (!preventTriggering) {
         channel?.trigger(eventName, data);
       }
-      setPreventTriggering(false);
     },
     [preventTriggering, channel],
   );
 
-  const bindEvent = useCallback(
-    <E extends keyof PusherEvents>(
-      eventName: E,
-      callback: (data: PusherEvents[E]) => void,
-    ) => {
-      channel?.bind(eventName, callback);
-    },
-    [channel],
-  );
+  const sharePlayingStates = useCallback(() => {
+    if (video.current) {
+      const { src, paused, currentTime } = video.current;
+      triggerEvent("client-playing-states", { url: src, paused, currentTime });
+    }
+  }, [triggerEvent, video]);
 
   const handleVideoURLSubmit = useCallback(
     handleSubmit(({ videoURL }) => {
@@ -63,28 +55,10 @@ export const Home: React.FC = () => {
       }
 
       video.current.src = videoURL;
-      triggerEvent("client-video-url", { videoURL });
+      sharePlayingStates();
     }),
-    [triggerEvent, video],
+    [video, sharePlayingStates],
   );
-
-  const handleSeeked = useCallback(() => {
-    triggerEvent("client-seeked", {
-      currentTime: video.current?.currentTime!,
-    });
-  }, [triggerEvent, video]);
-
-  const handlePlay = useCallback(() => {
-    triggerEvent("client-playing-state", {
-      playing: true,
-    });
-  }, [triggerEvent]);
-
-  const handlePause = useCallback(() => {
-    triggerEvent("client-playing-state", {
-      playing: false,
-    });
-  }, [triggerEvent]);
 
   useEffect(() => {
     const pusher = createPusherClient();
@@ -98,52 +72,71 @@ export const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    bindEvent(
-      "pusher:subscription_succeeded",
-      ({ members: initialMembers }) => {
-        setMembers(
-          Object.entries(initialMembers).map(([id, info]) => ({ id, info })),
-        );
-
-        bindEvent("client-video-url", ({ videoURL }) => {
-          if (!video.current) {
-            return;
-          }
-          video.current.src = videoURL;
-        });
-
-        bindEvent("client-seeked", ({ currentTime }) => {
-          if (!video.current) {
-            return;
-          }
-          setPreventTriggering(true);
-          video.current.currentTime = currentTime;
-        });
-
-        bindEvent("client-playing-state", ({ playing }) => {
-          if (!video.current) {
-            return;
-          }
-          setPreventTriggering(true);
-          if (playing) {
-            video.current.play();
-          } else {
-            video.current.pause();
-          }
-        });
-      },
-    );
-  }, [bindEvent]);
+    video.current?.addEventListener("loadeddata", () => {
+      video.current?.play();
+    });
+  }, [video]);
 
   useEffect(() => {
+    const bindEvent = <E extends keyof PusherEvents>(
+      eventName: E,
+      callback: (data: PusherEvents[E]) => void,
+    ) => {
+      channel?.bind(eventName, callback);
+    };
+
+    bindEvent("pusher:subscription_succeeded", ({ members }) => {
+      setMembers(Object.entries(members).map(([id, info]) => ({ id, info })));
+
+      bindEvent("client-playing-states", ({ url, paused, currentTime }) => {
+        if (!video.current) {
+          return;
+        }
+
+        setPreventTriggering(true);
+
+        const tasks: string[] = [];
+
+        if (video.current.currentTime !== currentTime) {
+          video.current.currentTime = currentTime;
+          tasks.push("seeked");
+        }
+
+        if (video.current.src !== url) {
+          video.current.src = url;
+          tasks.push("loadeddata");
+        }
+
+        if (paused && !video.current.paused) {
+          tasks.push("pause");
+          video.current.pause();
+        } else if (!paused && video.current.paused) {
+          tasks.push("play");
+          video.current.play();
+        }
+
+        const pendings = tasks.map(
+          (event) =>
+            new Promise((resolve) =>
+              video.current?.addEventListener(event, resolve),
+            ),
+        );
+
+        Promise.all(pendings).then(() => {
+          setPreventTriggering(false);
+        });
+      });
+    });
+
+    bindEvent("pusher:member_added", (member) => {
+      setMembers((members) => [...members, member]);
+      sharePlayingStates();
+    });
+
     bindEvent("pusher:member_removed", ({ id: removedId }) => {
       setMembers((members) => members.filter(({ id }) => id !== removedId));
     });
-
-    bindEvent("pusher:member_added", ({ id, info }) => {
-      setMembers((members) => [...members, { id, info }]);
-    });
-  }, [bindEvent, setMembers]);
+  }, [channel]);
 
   if (!channel) {
     return null;
@@ -154,9 +147,9 @@ export const Home: React.FC = () => {
       <video
         ref={video}
         controls
-        onSeeked={handleSeeked}
-        onPlay={handlePlay}
-        onPause={handlePause}
+        onSeeked={sharePlayingStates}
+        onPlay={sharePlayingStates}
+        onPause={sharePlayingStates}
         muted
         className="w-full"
       />
