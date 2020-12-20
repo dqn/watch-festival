@@ -1,10 +1,14 @@
 import { Channel } from "pusher-js";
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
 
-import { pusher } from "@/helpers/pusher";
+import { createPusherClient } from "@/helpers/pusher";
 
 type PusherEvents = {
+  "client-video-url": {
+    videoURL: string;
+  };
   "client-seeked": {
     currentTime: number;
   };
@@ -18,6 +22,7 @@ export const Home: React.FC = () => {
 
   const [channel, setChannel] = useState<Channel | null>(null);
   const [preventTriggering, setPreventTriggering] = useState(false);
+  const { register, handleSubmit } = useForm<{ videoURL: string }>();
 
   const triggerEvent = useCallback(
     <E extends keyof PusherEvents>(eventName: E, data: PusherEvents[E]) => {
@@ -29,7 +34,19 @@ export const Home: React.FC = () => {
     [preventTriggering, channel],
   );
 
-  const onSeeked = useCallback(() => {
+  const handleVideoURLSubmit = useCallback(
+    handleSubmit(({ videoURL }) => {
+      if (!video.current) {
+        return;
+      }
+
+      video.current.src = videoURL;
+      triggerEvent("client-video-url", { videoURL });
+    }),
+    [triggerEvent, video],
+  );
+
+  const handleSeeked = useCallback(() => {
     triggerEvent("client-seeked", {
       currentTime: video.current?.currentTime!,
     });
@@ -48,6 +65,7 @@ export const Home: React.FC = () => {
   }, [triggerEvent]);
 
   useEffect(() => {
+    const pusher = createPusherClient();
     const channelName = "presence-channel";
     const channel = pusher.subscribe(channelName);
     setChannel(channel);
@@ -69,6 +87,13 @@ export const Home: React.FC = () => {
       ) => {
         channel.bind(eventName, callback);
       };
+
+      bind("client-video-url", ({ videoURL }) => {
+        if (!video.current) {
+          return;
+        }
+        video.current.src = videoURL;
+      });
 
       bind("client-seeked", ({ currentTime }) => {
         if (!video.current) {
@@ -97,16 +122,20 @@ export const Home: React.FC = () => {
   }
 
   return (
-    <main className="max-w-7xl p-3 mx-auto">
+    <main className="max-w-7xl mx-auto">
       <video
         ref={video}
-        src="/sample.mp4"
         controls
-        onSeeked={onSeeked}
+        onSeeked={handleSeeked}
         onPlay={handlePlay}
         onPause={handlePause}
         muted
+        className="w-full"
       />
+      <form className="flex mt-2" onSubmit={handleVideoURLSubmit}>
+        <label className="flex-shrink-0">Video URL:</label>
+        <input ref={register} name="videoURL" className="border w-full ml-2" />
+      </form>
     </main>
   );
 };
