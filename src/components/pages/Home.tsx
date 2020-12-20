@@ -1,11 +1,22 @@
-import { Channel } from "pusher-js";
+import type { Channel, Members } from "pusher-js";
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { Override } from "@/helpers/Override";
 import { createPusherClient } from "@/helpers/pusher";
 
+type ChannelMemberInfo = { name: string };
+type ChannelMember = { id: string; info: ChannelMemberInfo };
+
 type PusherEvents = {
+  "pusher:subscription_succeeded": Override<
+    Members,
+    "members",
+    { [key: string]: ChannelMemberInfo }
+  >;
+  "pusher:member_added": ChannelMember;
+  "pusher:member_removed": ChannelMember;
   "client-video-url": {
     videoURL: string;
   };
@@ -21,6 +32,7 @@ export const Home: React.FC = () => {
   const video = useRef<HTMLVideoElement>(null);
 
   const [channel, setChannel] = useState<Channel | null>(null);
+  const [members, setMembers] = useState<ChannelMember[]>([]);
   const [preventTriggering, setPreventTriggering] = useState(false);
   const { register, handleSubmit } = useForm<{ videoURL: string }>();
 
@@ -32,6 +44,16 @@ export const Home: React.FC = () => {
       setPreventTriggering(false);
     },
     [preventTriggering, channel],
+  );
+
+  const bindEvent = useCallback(
+    <E extends keyof PusherEvents>(
+      eventName: E,
+      callback: (data: PusherEvents[E]) => void,
+    ) => {
+      channel?.bind(eventName, callback);
+    },
+    [channel],
   );
 
   const handleVideoURLSubmit = useCallback(
@@ -76,46 +98,52 @@ export const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!channel) {
-      return;
-    }
+    bindEvent(
+      "pusher:subscription_succeeded",
+      ({ members: initialMembers }) => {
+        setMembers(
+          Object.entries(initialMembers).map(([id, info]) => ({ id, info })),
+        );
 
-    channel.bind("pusher:subscription_succeeded", () => {
-      const bind = <E extends keyof PusherEvents>(
-        eventName: E,
-        callback: (data: PusherEvents[E]) => void,
-      ) => {
-        channel.bind(eventName, callback);
-      };
+        bindEvent("client-video-url", ({ videoURL }) => {
+          if (!video.current) {
+            return;
+          }
+          video.current.src = videoURL;
+        });
 
-      bind("client-video-url", ({ videoURL }) => {
-        if (!video.current) {
-          return;
-        }
-        video.current.src = videoURL;
-      });
+        bindEvent("client-seeked", ({ currentTime }) => {
+          if (!video.current) {
+            return;
+          }
+          setPreventTriggering(true);
+          video.current.currentTime = currentTime;
+        });
 
-      bind("client-seeked", ({ currentTime }) => {
-        if (!video.current) {
-          return;
-        }
-        setPreventTriggering(true);
-        video.current.currentTime = currentTime;
-      });
+        bindEvent("client-playing-state", ({ playing }) => {
+          if (!video.current) {
+            return;
+          }
+          setPreventTriggering(true);
+          if (playing) {
+            video.current.play();
+          } else {
+            video.current.pause();
+          }
+        });
+      },
+    );
+  }, [bindEvent]);
 
-      bind("client-playing-state", ({ playing }) => {
-        if (!video.current) {
-          return;
-        }
-        setPreventTriggering(true);
-        if (playing) {
-          video.current.play();
-        } else {
-          video.current.pause();
-        }
-      });
+  useEffect(() => {
+    bindEvent("pusher:member_removed", ({ id: removedId }) => {
+      setMembers((members) => members.filter(({ id }) => id !== removedId));
     });
-  }, [channel]);
+
+    bindEvent("pusher:member_added", ({ id, info }) => {
+      setMembers((members) => [...members, { id, info }]);
+    });
+  }, [bindEvent, setMembers]);
 
   if (!channel) {
     return null;
@@ -136,6 +164,16 @@ export const Home: React.FC = () => {
         <label className="flex-shrink-0">Video URL:</label>
         <input ref={register} name="videoURL" className="border w-full ml-2" />
       </form>
+      <article>
+        <section>
+          <label>Concurrent Viewers: {members.length}</label>
+          <ul>
+            {members.map(({ id, info }) => (
+              <li key={id}>{info.name}</li>
+            ))}
+          </ul>
+        </section>
+      </article>
     </main>
   );
 };

@@ -1,6 +1,6 @@
 import Pusher from "pusher-js";
 
-Pusher.logToConsole = true;
+Pusher.logToConsole = process.env.NODE_ENV !== "production";
 
 export function createPusherClient() {
   return new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
