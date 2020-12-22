@@ -24,7 +24,7 @@ export const Profile: React.FC<Props> = ({ callback }) => {
   return (
     <main className="max-w-xs mx-auto">
       <form onSubmit={handleNameSubmit}>
-        <section className="flex">
+        <section className="flex mt-6">
           <label className="flex-shrink">Name</label>
           <input
             ref={register({ required: true, maxLength: 20 })}
@@ -36,7 +36,7 @@ export const Profile: React.FC<Props> = ({ callback }) => {
 
         <section className="mt-4">
           <button className="bg-green-600 text-white rounded font-semibold w-full p-2">
-            Submit
+            Update
           </button>
         </section>
       </form>
