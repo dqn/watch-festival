@@ -23,12 +23,12 @@ export const CommentViewer: React.FC<Props> = ({ comments, onComment }) => {
     [onComment],
   );
 
-  const listRef = useRef<HTMLLIElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const scrollToBottomOfList = useCallback(() => {
-    listRef.current?.scrollIntoView({
+    listRef.current?.scrollTo({
       behavior: "smooth",
-      block: "end",
+      top: listRef.current.scrollHeight,
     });
   }, [listRef]);
 
@@ -39,7 +39,10 @@ export const CommentViewer: React.FC<Props> = ({ comments, onComment }) => {
   return (
     <div className="flex flex-col h-full">
       <div className="relative border flex-grow h-80">
-        <ul className="absolute overflow-y-auto w-full h-full p-2">
+        <ul
+          ref={listRef}
+          className="absolute overflow-y-auto w-full h-full p-2"
+        >
           {comments.map(({ name, text }, i) => (
             <li className="my-2" key={i}>
               <span className="font-semibold">{name}</span>
@@ -48,7 +51,6 @@ export const CommentViewer: React.FC<Props> = ({ comments, onComment }) => {
               </span>
             </li>
           ))}
-          <li ref={listRef} />
         </ul>
       </div>
       <div className="border border-t-0">
