@@ -12,13 +12,17 @@ export const Home: React.FC = () => {
 
   return (
     <main className="max-w-7xl mx-auto">
-      <h1>Hello!</h1>
-      <button
-        className="rounded bg-green-600 text-white font-semibold p-2"
-        onClick={handleCreateNewRoom}
-      >
-        Create new room
-      </button>
+      <header className="text-center border rounded-lg p-8 m-5">
+        <h1 className="text-xl">Watch the videos with your friends!</h1>
+        <div className="text-center mt-5">
+          <button
+            className="rounded bg-green-600 text-white font-semibold p-2"
+            onClick={handleCreateNewRoom}
+          >
+            Create new room
+          </button>
+        </div>
+      </header>
     </main>
   );
 };
