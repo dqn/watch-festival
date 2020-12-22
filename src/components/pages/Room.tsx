@@ -40,7 +40,7 @@ export const Room: React.FC<Props> = ({ id, name }) => {
   const [members, setMembers] = useState<ChannelMember[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [preventTriggering, setPreventTriggering] = useState(false);
-  const { register, handleSubmit } = useForm<{ url: string }>();
+  const { register, handleSubmit, reset } = useForm<{ url: string }>();
 
   const triggerEvent = useCallback(
     <E extends keyof PusherEvents>(eventName: E, data: PusherEvents[E]) => {
@@ -117,6 +117,7 @@ export const Room: React.FC<Props> = ({ id, name }) => {
 
         if (video.current.src !== url) {
           video.current.src = url;
+          reset({ url });
           tasks.push("loadeddata");
         }
 
