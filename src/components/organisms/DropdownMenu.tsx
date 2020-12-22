@@ -46,6 +46,7 @@ export const DropdownMenu: React.FC<Props> = ({ items }) => {
         <div
           className="bg-white absolute right-0 py-1 mt-2 w-56 border rounded focus:outline-none"
           ref={ref}
+          onClick={() => setIsOpen(false)}
           onBlur={handleBlur}
           tabIndex={1}
         >
