@@ -6,6 +6,9 @@ import { useForm } from "react-hook-form";
 import type { Override } from "@/helpers/Override";
 import { createPusherClient } from "@/helpers/pusher";
 
+import type { Comment } from "../organisms/CommentViewer";
+import { CommentViewer } from "../organisms/CommentViewer";
+
 type ChannelMemberInfo = { name: string };
 type ChannelMember = { id: string; info: ChannelMemberInfo };
 
@@ -22,17 +25,20 @@ type PusherEvents = {
     paused: boolean;
     currentTime: number;
   };
+  "client-comment": Comment;
 };
 
 export type Props = {
   id: string;
+  name: string;
 };
 
-export const Room: React.FC<Props> = ({ id }) => {
+export const Room: React.FC<Props> = ({ id, name }) => {
   const video = useRef<HTMLVideoElement>(null);
 
   const [channel, setChannel] = useState<null | Channel>(null);
   const [members, setMembers] = useState<ChannelMember[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [preventTriggering, setPreventTriggering] = useState(false);
   const { register, handleSubmit } = useForm<{ url: string }>();
 
@@ -62,6 +68,15 @@ export const Room: React.FC<Props> = ({ id }) => {
       sharePlayingStates();
     }),
     [video, sharePlayingStates],
+  );
+
+  const handleComment = useCallback(
+    (text: string) => {
+      const comment = { name, text };
+      setComments((comments) => [...comments, comment]);
+      triggerEvent("client-comment", comment);
+    },
+    [triggerEvent],
   );
 
   useEffect(() => {
@@ -134,6 +149,10 @@ export const Room: React.FC<Props> = ({ id }) => {
     bindEvent("pusher:member_removed", ({ id: removedId }) => {
       setMembers((members) => members.filter(({ id }) => id !== removedId));
     });
+
+    bindEvent("client-comment", (comment) => {
+      setComments((comments) => [...comments, comment]);
+    });
   }, [channel]);
 
   if (!channel) {
@@ -141,30 +160,30 @@ export const Room: React.FC<Props> = ({ id }) => {
   }
 
   return (
-    <main className="max-w-7xl mx-auto">
-      <video
-        ref={video}
-        controls
-        onSeeked={sharePlayingStates}
-        onPlay={sharePlayingStates}
-        onPause={sharePlayingStates}
-        muted
-        className="w-full"
-      />
-      <form className="flex mt-2" onSubmit={handleVideoURLSubmit}>
-        <label className="flex-shrink-0">Video URL:</label>
-        <input ref={register} name="url" className="border w-full ml-2" />
-      </form>
-      <article>
-        <section>
-          <label>Concurrent Viewers: {members.length}</label>
-          <ul>
-            {members.map(({ id, info }) => (
-              <li key={id}>{info.name}</li>
-            ))}
-          </ul>
-        </section>
-      </article>
+    <main className="max-w-10xl mx-auto">
+      <div className="flex flex-wrap lg:mt-8">
+        <div className="w-full lg:w-3/4">
+          <video
+            ref={video}
+            controls
+            onSeeked={sharePlayingStates}
+            onPlay={sharePlayingStates}
+            onPause={sharePlayingStates}
+            muted
+            className="w-full"
+          />
+          <div className="py-2 lg:py-0">
+            <form className="flex" onSubmit={handleVideoURLSubmit}>
+              <label className="flex-shrink-0">Video URL:</label>
+              <input ref={register} name="url" className="border w-full ml-2" />
+            </form>
+          </div>
+        </div>
+
+        <div className="w-full lg:w-1/4 lg:pl-4">
+          <CommentViewer comments={comments} onComment={handleComment} />
+        </div>
+      </div>
     </main>
   );
 };

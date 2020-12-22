@@ -33,7 +33,7 @@ export const NavigationBar: React.FC = () => {
 
   return (
     <nav className="text-white text-xl font-bold bg-black px-3 py-2">
-      <div className="flex flex-wrap items-center justify-between w-full px-2 max-w-7xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between w-full px-2 max-w-10xl mx-auto">
         <div className="flex-grow">
           <Link href="/">
             <a className="hover:underline">Watch Festival</a>

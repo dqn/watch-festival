@@ -28,7 +28,7 @@ const RoomPage: NextPage = () => {
 
   return (
     <>
-      <Room id={id} />
+      <Room id={id} name={cookies.name} />
     </>
   );
 };
