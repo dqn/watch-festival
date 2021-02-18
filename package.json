@@ -9,7 +9,7 @@
   "license": "MIT",
   "dependencies": {
     "next": "10.0.7",
-    "pusher": "4.0.2",
+    "pusher": "5.0.0",
     "pusher-js": "7.0.3",
     "react": "17.0.1",
     "react-cookie": "4.0.3",
